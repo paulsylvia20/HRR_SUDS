@@ -1,0 +1,108 @@
+---
+title: "HLM Preprocessing"
+author: "Paul Sylvia"
+date: "2025-05-21"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Preparing the Level 1 Dataset
+
+The level 1 dataset is a representative of nearly all US counties. The initial step is to load the necessary libraries, set the working directory and load the necessary datasets. We load data taken from the US census and County Health Rankings and Roadmaps initiative, as well as AHA hospital data to ensure only the involvement of level 1 counties clustered later-on.
+
+```{r, warning=FALSE, message=FALSE}
+library.list <- c("dplyr", "psych", "mice")
+
+for (i in 1:length(library.list)) {
+  if (!library.list[i] %in% rownames(installed.packages())) {
+    install.packages(library.list[i])
+  }
+  library(library.list[i], character.only = TRUE)}
+
+county_dat <- read.csv('county_MH.csv') ##Primary county-level dataset
+social_capital <- read.csv('social_capital.csv') ##Dataset for the social capital variable
+
+#Merge the county data into one dataset, each county is one case
+social_capital$X5.digit.FIPS.Code <- social_capital$FIPS.Code
+county_dat <- county_dat %>%
+  right_join(social_capital, by = "X5.digit.FIPS.Code")
+
+#Add an HRR ID variable to the dataset
+HRR_county_crosswalk <- read.csv('HRR_county_crosswalk.csv') ##this dataset tells which HRR a county belongs to
+county_dat$HRR <- HRR_county_crosswalk$hrr[match(county_dat$X5.digit.FIPS.Code, HRR_county_crosswalk$county)] #adds HRR variable to L1 dataset
+```
+
+The variables of interest have messy names. Here we are renaming them and performing some rescalings.
+
+```{r}
+ #Cleaning variable names
+county_dat$social_capital <- county_dat$Putnam
+county_dat$poverty_rate <- county_dat$Poverty.rate.x/100 #transform to a better scale for HLM
+county_dat$population <- county_dat$Population.raw.value
+county_dat$suicide <- county_dat$Crude.suicide.rate
+county_dat$overdose <- county_dat$overdose/county_dat$population
+county_dat$rural <- county_dat$X..Rural.raw.value
+county_dat$med.inc <- county_dat$Median.household.income
+county_dat$black <- county_dat$X..Non.Hispanic.Black.raw.value
+county_dat$hispanic <- county_dat$X..Hispanic.raw.value
+county_dat$older <- county_dat$X..65.and.Older.raw.value
+county_dat$younger <- county_dat$X..Below.18.Years.of.Age.raw.value
+county_dat$unemployment <- county_dat$Unemployment.raw.value
+county_dat$med.inc <- county_dat$Median.Household.Income.raw.value
+county_dat$gini <- (county_dat$gini-min(county_dat$gini, na.rm=TRUE))/(max(county_dat$gini, na.rm=TRUE)-min(county_dat$gini, na.rm=TRUE)) ##rescales so the smallest value in the dataset==0 and the largest==1. This is done so a one unit change in 'gini' is interpretable
+
+```
+
+Finally, we declare the level-1 dataset and filter out certain cases with too much missing data, then we impute the remaining missing data with predictive mean matching.
+
+```{r, warning=FALSE, message=FALSE}
+L1 <- county_dat %>%
+  select(HRR, X5.digit.FIPS.Code, overdose, hispanic, older, younger, population, 
+         black, rural, gini, med.inc, employment, social_capital, poverty_rate) %>%
+  filter(is.na(HRR)==FALSE) #removes cases with no crosswalk
+
+print(paste("Total Missing Data: ", round(sum(is.na(L1))/(nrow(L1)*ncol(L1)),digits=3), sep=""))
+L1_listwise <-L1[is.na(L1$employment)==FALSE & is.na(L1$med.inc)==FALSE,]
+
+print(paste("Ammount of missing data imputed: ", round(sum(is.na(L1))/(nrow(L1)*ncol(L1)),digits=3), sep=""))
+imp <- mice(L1_listwise[,c(2:9,12)], method="pmm", m = 1, maxit = 1, seed = 123)##predictive mean matching
+
+L1_imp <- cbind(L1_listwise[,c(1,10:11,13)], county_code = L1_listwise$X5.digit.FIPS.Code, complete(imp))
+print(paste("Missing data after imputation: ", round(sum(is.na(L1_imp))/(nrow(L1)*ncol(L1))), sep=""))
+head(L1_imp)
+
+```
+
+This next step guarantees the cases all have a cluster match.
+
+```{r}
+hospital_data <- read.csv('hospital_data_23.csv') ##Primary HRR-level dataset
+hospital_data$HRR <- HRR_county_crosswalk$hrr[match(hospital_data$FCOUNTY, HRR_county_crosswalk$county)] #adds HRR variable to L2 dataset
+
+temp <- unique(L1_imp$HRR)[is.na(match(unique(L1_imp$HRR), unique(hospital_data$HRR)))] #identify cluster non-matches
+L1_imp <- L1_imp[-which(L1_imp$HRR %in% temp),] ##Remove cases with no cluster matches in L2 dataset
+print(paste("Proportion of Cases w/out Cluster Matches: ", round(1-nrow(L1_imp)/nrow(county_dat), digits=3), sep = "")) ##Proportion of cases removed
+
+```
+
+Rescaling Before Aggregating and Centering
+
+```{r}
+L1_imp$med.inc <- as.numeric(scale(L1_imp$med.inc))
+L1_imp$cluster_population <- L1_imp$population##for scaling Hospital data later
+L1_imp$population <- as.numeric(scale(L1_imp$population))
+names(L1_imp)
+#Grand Mean centering
+L1_imp_grand <- as.data.frame(lapply(L1_imp[,-c(1,5,15)], function(x) x - mean(x)))
+L1_imp_grand <- cbind(L1_imp[,c(1,5,15)], L1_imp_grand)
+names(L1_imp_grand)
+colnames(L1_imp_grand)[-(1:3)] <- paste0(colnames(L1_imp_grand)[-(1:3)], "_grand")
+
+write.csv(file = "L1_dataset.csv", L1_imp_grand, row.names=FALSE)
+```
