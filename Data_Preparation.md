@@ -104,9 +104,6 @@ L1 <- county_dat %>%
   filter(is.na(HRR)==FALSE) #removes 2 cases with no crosswalk
 ```
 
-> 💡 **Note**  
-> HLM requires
-
 #### Rescaling variables
 
 In general, HLM requires variables to be on similar scales. In the next
