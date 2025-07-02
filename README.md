@@ -12,11 +12,9 @@ Public Links:
  - [Social Capital Project](https://www.jec.senate.gov/public/index.cfm/republicans/socialcapitalproject)
  - [US Census Gini Index](https://data.census.gov/table/ACSDT1Y2023.B19083?q=gini+index)
 
-## Part 1: Cleaning and Merging Datasets
-[[]()](https://github.com/paulsylvia20/HRR_SUDS/blob/main/Data_Preparation.md)
+[### Part 1: Cleaning and Merging Datasets](https://github.com/paulsylvia20/HRR_SUDS/blob/main/Data_Preparation.md)
 
-## Part 2: Linear Mixed Effects Modeling
-[]()
+[### Part 2: Linear Mixed Effects Modeling](https://github.com/paulsylvia20/HRR_SUDS/blob/main/LLM_main.md)
 
 ## Primary Results
 
