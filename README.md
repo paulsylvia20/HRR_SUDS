@@ -15,6 +15,3 @@ Public Links:
 ### [Part 1: Cleaning and Merging Datasets](https://github.com/paulsylvia20/HRR_SUDS/blob/main/Data_Preparation.md)
 
 ### [Part 2: Linear Mixed Effects Modeling](https://github.com/paulsylvia20/HRR_SUDS/blob/main/LLM_main.md)
-
-## Primary Results
-
