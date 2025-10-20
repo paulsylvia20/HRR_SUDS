@@ -619,7 +619,7 @@ std_mod <- lmer(formula(L2_step1), data = std_dat)
     ##   0.01449643   0.02049607 134.92941489   0.70727870   0.48061308
 
     ## 
-    ##  Interaction effect for emergency room count and income innequality (not statistically significantly > 0):
+    ##  Interaction effect for emergency room count and income innequality:
 
     ##     Estimate   Std. Error           df      t value     Pr(>|t|) 
     ##  0.053623543  0.019652105 74.595758795  2.728641228  0.007927009
@@ -640,3 +640,4 @@ fewer emergency rooms, their might be less disparity in utilization.
     ## `geom_smooth()` using formula = 'y ~ x'
 
 <img src="HLM_analysis_files/figure-gfm/mod graph-1.png" style="display: block; margin: auto;" />
+
